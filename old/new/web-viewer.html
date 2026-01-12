@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galaxy Book - Cloud Viewer</title>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 0; }
+        .header { background-color: #0078d7; color: white; padding: 15px 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header h1 { margin: 0; font-size: 1.2rem; }
+        .container { padding: 20px; max-width: 1000px; margin: 0 auto; }
+        
+        .card { background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); padding: 20px; margin-bottom: 20px; }
+        
+        .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 0.85rem; font-weight: bold; color: #555; margin-bottom: 5px; }
+        input, select { padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background-color: #28a745; color: white; border: none; padding: 9px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #218838; }
+
+        .table-responsive { overflow-x: auto; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        th { background-color: #e9ecef; padding: 10px; text-align: left; border-bottom: 2px solid #ccc; color: #495057; font-size: 0.9rem; }
+        td { padding: 10px; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        tr:hover { background-color: #f8f9fa; }
+        
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
+        .bg-blue { background-color: #e3f2fd; color: #0d47a1; }
+        .bg-green { background-color: #e8f5e9; color: #1b5e20; }
+        
+        #loading { text-align: center; padding: 20px; font-style: italic; color: #666; }
+        .total-box { margin-top: 15px; font-weight: bold; text-align: right; color: #0078d7; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Galaxy Cloud Viewer</h1>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="filters">
+                <div class="form-group">
+                    <label>From Date</label>
+                    <input type="date" id="dateFrom">
+                </div>
+                <div class="form-group">
+                    <label>To Date</label>
+                    <input type="date" id="dateTo">
+                </div>
+                <div class="form-group">
+                    <label>Employee Name</label>
+                    <input type="text" id="txtName" placeholder="Search name...">
+                </div>
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <button onclick="loadData()">Load Data</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Saved Entries</h3>
+            <div id="loading">Connecting to Cloud...</div>
+            <div class="table-responsive">
+                <table id="dataTable" style="display:none;">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Work (Cols)</th>
+                            <th>Count</th>
+                            <th>Uppad</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+            <div class="total-box" id="totalBox"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURATION (SAME AS YOUR ADMIN APP) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBh8rTtRssy9j7UELcVmbilv7cQwFtDl8o",
+            authDomain: "galaxybook-1bbc7.firebaseapp.com",
+            databaseURL: "https://galaxybook-1bbc7-default-rtdb.firebaseio.com",
+            projectId: "galaxybook-1bbc7",
+            storageBucket: "galaxybook-1bbc7.firebasestorage.app",
+            messagingSenderId: "424415030072",
+            appId: "1:424415030072:web:c2790e3d465e3cd3992fcd",
+            measurementId: "G-SX2KFZ3PXW"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Set default dates
+        const today = new Date();
+        document.getElementById('dateTo').valueAsDate = today;
+        document.getElementById('dateFrom').valueAsDate = new Date(today.getFullYear(), today.getMonth(), 1);
+
+        async function loadData() {
+            const ui = {
+                loading: document.getElementById('loading'),
+                table: document.getElementById('dataTable'),
+                tbody: document.getElementById('tableBody'),
+                total: document.getElementById('totalBox'),
+                from: document.getElementById('dateFrom').value,
+                to: document.getElementById('dateTo').value,
+                name: document.getElementById('txtName').value.toLowerCase()
+            };
+
+            ui.loading.style.display = 'block';
+            ui.loading.innerText = "Fetching Data...";
+            ui.table.style.display = 'none';
+            ui.tbody.innerHTML = '';
+            ui.total.innerText = '';
+
+            try {
+                // Fetch Data from 'EmployeeData' node in Firebase
+                const snapshot = await database.ref('EmployeeData').once('value');
+                const data = snapshot.val();
+
+                if (!data) {
+                    ui.loading.innerText = "No data found in Cloud.";
+                    return;
+                }
+
+                // Convert object to array and Filter
+                let rows = Array.isArray(data) ? data : Object.values(data);
+
+                rows = rows.filter(r => {
+                    const matchDate = r.EntryDate >= ui.from && r.EntryDate <= ui.to;
+                    const matchName = ui.name === "" || r.EmpName_English.toLowerCase().includes(ui.name);
+                    return matchDate && matchName;
+                });
+
+                if (rows.length === 0) {
+                    ui.loading.innerText = "No records found for this date range.";
+                    return;
+                }
+
+                // Sort by Date (Newest First)
+                rows.sort((a, b) => new Date(b.EntryDate) - new Date(a.EntryDate));
+
+                let totalUppad = 0;
+
+                rows.forEach(r => {
+                    const tr = document.createElement('tr');
+                    
+                    // Format Columns String (e.g., A:10, B:5)
+                    let workStr = [];
+                    ['A','B','C','D','E','F','G'].forEach(k => {
+                        if(r[`Col_${k}`]) workStr.push(`<b>${k}:</b> ${r[`Col_${k}`]}`);
+                    });
+
+                    tr.innerHTML = `
+                        <td>${r.EntryDate}</td>
+                        <td>${r.EmpName_English} <br><small style="color:#777">${r.EmpName_Gujarati || ''}</small></td>
+                        <td><span class="badge ${r.EntryType === 'પેલ' ? 'bg-blue' : 'bg-green'}">${r.EntryType}</span></td>
+                        <td>${workStr.join(', ') || '-'}</td>
+                        <td>${r.Col_Ct || '-'}</td>
+                        <td style="color:red; font-weight:bold">${r.Uppad > 0 ? r.Uppad : '-'}</td>
+                    `;
+                    ui.tbody.appendChild(tr);
+                    totalUppad += parseFloat(r.Uppad) || 0;
+                });
+
+                ui.total.innerText = `Total Records: ${rows.length} | Total Uppad: ${totalUppad}`;
+                ui.loading.style.display = 'none';
+                ui.table.style.display = 'table';
+
+            } catch (error) {
+                console.error(error);
+                ui.loading.innerText = "Error: " + error.message;
+            }
+        }
+
+        // Load immediately on open
+        loadData();
+    </script>
+</body>
+</html>

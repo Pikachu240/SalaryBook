@@ -1,0 +1,114 @@
+﻿@{
+    ViewData["Title"] = "Shortcut Settings";
+}
+
+<div class="container mt-4" style="max-width: 500px;">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Keyboard Shortcuts</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small">Click a box and press the desired key combination.</p>
+
+            <form id="frmSettings">
+                <div class="mb-3 row">
+                    <label class="col-sm-4 col-form-label fw-bold">Save Button:</label>
+                    <div class="col-sm-8">
+                        <input type="text" id="txtSave" class="form-control key-input" readonly />
+                    </div>
+                </div>
+
+                <div class="mb-3 row">
+                    <label class="col-sm-4 col-form-label fw-bold">Generate Btn:</label>
+                    <div class="col-sm-8">
+                        <input type="text" id="txtGenerate" class="form-control key-input" readonly />
+                    </div>
+                </div>
+
+                <div class="mb-3 row">
+                    <label class="col-sm-4 col-form-label fw-bold">Update Btn:</label>
+                    <div class="col-sm-8">
+                        <input type="text" id="txtUpdate" class="form-control key-input" readonly />
+                    </div>
+                </div>
+
+                <div class="mb-3 row">
+                    <label class="col-sm-4 col-form-label fw-bold">Print Button:</label>
+                    <div class="col-sm-8">
+                        <input type="text" id="txtPrint" class="form-control key-input" readonly />
+                    </div>
+                </div>
+
+                <div class="mb-3 row">
+                    <label class="col-sm-4 col-form-label fw-bold">New Entry:</label>
+                    <div class="col-sm-8">
+                        <input type="text" id="txtNew" class="form-control key-input" readonly />
+                    </div>
+                </div>
+
+                <hr />
+                <button type="button" class="btn btn-success w-100 fw-bold" onclick="saveSettings()">Save Settings</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Load current settings
+            $.get('/Settings/GetSettings', function (data) {
+                $('#txtSave').val(data.saveKey);
+                $('#txtGenerate').val(data.generateKey);
+                $('#txtUpdate').val(data.updateKey);
+                $('#txtPrint').val(data.printKey);
+                $('#txtNew').val(data.newKey);
+            });
+
+            // Capture Keystrokes logic
+            $('.key-input').keydown(function(e) {
+                e.preventDefault();
+
+                // Ignore just pressing Control/Alt/Shift alone
+                if (e.key === "Control" || e.key === "Alt" || e.key === "Shift") return;
+
+                var keyCombo = "";
+                if (e.ctrlKey) keyCombo += "Ctrl+";
+                if (e.altKey) keyCombo += "Alt+";
+                if (e.shiftKey) keyCombo += "Shift+";
+
+                // Capitalize first letter of key
+                var keyName = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+
+                keyCombo += keyName;
+
+                $(this).val(keyCombo);
+            });
+        });
+
+        function saveSettings() {
+            var payload = {
+                SaveKey: $('#txtSave').val(),
+                GenerateKey: $('#txtGenerate').val(),
+                UpdateKey: $('#txtUpdate').val(),
+                PrintKey: $('#txtPrint').val(),
+                NewKey: $('#txtNew').val(),
+                CloseKey: "Escape" // Close is usually handled by browser or specific logic
+            };
+
+            $.ajax({
+                url: '/Settings/SaveSettings',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(payload),
+                success: function (res) {
+                    if(res.success) {
+                        alert(res.message);
+                    } else {
+                        alert(res.message);
+                    }
+                }
+            });
+        }
+    </script>
+}

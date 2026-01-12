@@ -1,0 +1,133 @@
+﻿@{
+    ViewData["Title"] = "Rate Master";
+}
+
+<div class="container" style="max-width: 600px;">
+    <h3 class="mt-3">Rate Master Config</h3>
+    <hr />
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+
+            <div class="mb-4">
+                <label class="form-label fw-bold">Select Type:</label>
+                <select id="cmbType" class="form-select">
+                    <option value="પેલ">પેલ (Pel)</option>
+                    <option value="મથાળા">મથાળા (Mathala)</option>
+                </select>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Rate A</label>
+                    <input type="number" id="txtA" class="form-control" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Rate B</label>
+                    <input type="number" id="txtB" class="form-control" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Rate C</label>
+                    <input type="number" id="txtC" class="form-control" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Rate D</label>
+                    <input type="number" id="txtD" class="form-control" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Rate E</label>
+                    <input type="number" id="txtE" class="form-control" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Rate F</label>
+                    <input type="number" id="txtF" class="form-control" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Rate G</label>
+                    <input type="number" id="txtG" class="form-control" />
+                </div>
+            </div>
+
+            <hr class="my-4" />
+
+            <button id="btnSave" class="btn btn-primary w-100 fw-bold p-2">
+                Save Rates (Alt + S)
+            </button>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Load default type on page load
+            loadRates();
+
+            // Reload when Type changes
+            $('#cmbType').change(function () {
+                loadRates();
+            });
+
+            // Save Button Click
+            $('#btnSave').click(function () {
+                saveRates();
+            });
+
+            // Shortcut Key (Alt+S)
+            $(document).keydown(function(e) {
+                if (e.altKey && (e.key === 's' || e.key === 'S')) {
+                    e.preventDefault(); // Stop browser from saving the page
+                    saveRates();
+                }
+            });
+        });
+
+        function loadRates() {
+            var type = $('#cmbType').val();
+
+            // Show loading state (optional)
+            $('input[type=number]').val('...');
+
+            $.get('/Rate/GetRates?type=' + type, function (data) {
+                $('#txtA').val(data.val_A);
+                $('#txtB').val(data.val_B);
+                $('#txtC').val(data.val_C);
+                $('#txtD').val(data.val_D);
+                $('#txtE').val(data.val_E);
+                $('#txtF').val(data.val_F);
+                $('#txtG').val(data.val_G);
+            });
+        }
+
+        function saveRates() {
+            var payload = {
+                RateType: $('#cmbType').val(),
+                Val_A: $('#txtA').val(),
+                Val_B: $('#txtB').val(),
+                Val_C: $('#txtC').val(),
+                Val_D: $('#txtD').val(),
+                Val_E: $('#txtE').val(),
+                Val_F: $('#txtF').val(),
+                Val_G: $('#txtG').val()
+            };
+
+            $.ajax({
+                url: '/Rate/Save',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(payload),
+                success: function (resp) {
+                    if (resp.success) {
+                        alert(resp.message);
+                    } else {
+                        alert(resp.message);
+                    }
+                },
+                error: function () {
+                    alert("Error connecting to server.");
+                }
+            });
+        }
+    </script>
+}

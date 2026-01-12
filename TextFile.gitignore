@@ -1,0 +1,15 @@
+﻿# Ignore build results
+bin/
+obj/
+
+# Ignore user-specific files
+.vs/
+*.user
+
+# Ignore the actual database (It will be created automatically by your code)
+GalaxyBook.db
+GalaxyBook.db-shm
+GalaxyBook.db-wal
+
+# Ignore logs
+*.log
